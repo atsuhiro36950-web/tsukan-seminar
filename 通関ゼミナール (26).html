@@ -1,0 +1,849 @@
+<!DOCTYPE html>
+<html lang="ja"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>通関ゼミナール 2026-2027</title>
+  <link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&amp;display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --navy:      #0d1b3e;
+      --navy-mid:  #1a2f5e;
+      --gold:      #b8963e;
+      --gold-light:#d4af6a;
+      --gold-pale: #f5e9d0;
+      --cream:     #faf8f4;
+      --text:      #1c1c2e;
+      --text-muted:#5a5a72;
+      --border:    #ddd5c0;
+      --white:     #ffffff;
+      --edit-ring: #3b82f6;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif;
+      background: var(--cream);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 40px 24px;
+    }
+
+    /* ─── page wrapper ─── */
+    .page {
+      width: 100%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* ─── toolbar ─── */
+    .toolbar {
+      display: flex; align-items: center;
+      justify-content: flex-end; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .edit-hint { font-size: 12px; color: var(--text-muted); display: none; }
+    .edit-hint.visible { display: block; }
+
+    .btn-edit {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 18px; border-radius: 6px;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      border: 2px solid var(--navy-mid);
+      background: var(--white); color: var(--navy-mid);
+      transition: all 0.18s;
+    }
+    .btn-edit:hover  { background: var(--navy-mid); color: var(--white); }
+    .btn-edit.active { background: var(--edit-ring); border-color: var(--edit-ring); color: var(--white); }
+
+    .btn-save {
+      display: none; align-items: center; gap: 7px;
+      padding: 8px 18px; border-radius: 6px;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      border: 2px solid #16a34a; background: #16a34a; color: var(--white);
+      transition: all 0.18s;
+    }
+    .btn-save:hover { background: #15803d; border-color: #15803d; }
+    .btn-save.visible { display: flex; }
+
+    /* ─── header ─── */
+    .header {
+      background: var(--navy);
+      border-radius: 4px 4px 0 0;
+      padding: 40px 48px 32px;
+      position: relative; overflow: hidden;
+    }
+    .header::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 4px;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light), var(--gold));
+    }
+    .header::after {
+      content: '通関'; position: absolute; right: 32px; bottom: -12px;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif; font-size: 120px; font-weight: 700;
+      color: rgba(255,255,255,0.04); line-height: 1; pointer-events: none;
+    }
+    .header-label {
+      font-size: 13px; font-weight: 500; letter-spacing: 0.25em;
+      color: var(--gold); margin-bottom: 12px;
+    }
+    .header-title {
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif; font-size: 36px; font-weight: 700;
+      color: var(--white); line-height: 1.2; letter-spacing: 0.05em;
+    }
+    .header-sub {
+      font-size: 15px; color: rgba(255,255,255,0.55);
+      margin-top: 6px; letter-spacing: 0.08em;
+    }
+
+    /* ─── info bar ─── */
+    .info-bar {
+      background: var(--gold-pale); border-left: 4px solid var(--gold);
+      padding: 18px 48px; display: flex; flex-wrap: wrap; gap: 16px 36px;
+    }
+    .info-item { display: flex; align-items: center; gap: 8px; font-size: 15px; color: var(--navy-mid); }
+    .info-item .icon { width: 17px; height: 17px; opacity: 0.7; flex-shrink: 0; }
+    .info-label { font-weight: 700; white-space: nowrap; }
+    .info-editable {
+      border: none; background: transparent;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif;
+      font-size: 15px; color: var(--navy-mid);
+      outline: none; cursor: default;
+    }
+    body.edit-mode .info-editable {
+      border-bottom: 1.5px dashed var(--edit-ring);
+      cursor: text; background: rgba(59,130,246,0.05);
+      border-radius: 2px; padding: 1px 3px;
+    }
+
+    /* ─── table wrapper ─── */
+    .table-wrap {
+      background: var(--white);
+      border: 1px solid var(--border); border-top: none;
+      border-radius: 0 0 4px 4px;
+      /* NO overflow-x: auto — we want it to fill width without scrolling */
+    }
+    table {
+      width: 100%; border-collapse: collapse;
+      table-layout: auto;   /* key: respect column widths, don't expand */
+    }
+
+    /* ─── column widths (fixed layout) ─── */
+    col.col-no      { width: 52px; }
+    col.col-date    { width: 122px; }
+    col.col-content { min-width: 160px; }
+    col.col-ctrl    { width: 56px; }
+
+    thead tr { background: var(--navy-mid); }
+    thead th {
+      padding: 13px 10px;
+      font-size: 13px; font-weight: 700; letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.75); text-align: left; white-space: nowrap;
+      overflow: hidden;
+    }
+    thead th.center { text-align: center; }
+
+    tbody tr { border-bottom: 1px solid #ede8de; transition: background 0.15s; }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: #f7f3eb; }
+
+    td {
+      padding: 14px 10px;
+      font-size: 15px; vertical-align: middle; line-height: 1.55;
+    }
+
+    /* each td: span is inline-block, nowrap by default */
+    td span[contenteditable] { display: inline-block; white-space: nowrap; }
+
+    /* lecture content allows wrapping */
+    .td-content span[contenteditable] { white-space: normal; word-break: break-word; }
+
+    .td-no {
+      text-align: center;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif; font-weight: 700;
+      font-size: 18px; color: var(--gold); white-space: nowrap;
+    }
+    .td-title   { font-weight: 700; color: var(--navy); white-space: nowrap; }
+    .td-date    { white-space: nowrap; color: var(--text-muted); }
+    .td-content { color: var(--text-muted); }
+    .td-dept    { text-align: center; white-space: nowrap; }
+    .td-lecturer{ text-align: center; white-space: nowrap; }
+    .td-target  { text-align: center; white-space: nowrap; }
+
+    /* ─── dept / target badges ─── */
+    .badge {
+      display: inline-block;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif;
+      font-size: 15px; font-weight: 400;
+      padding: 3px 10px; border-radius: 20px; letter-spacing: 0.02em;
+      white-space: nowrap;
+      background: transparent;
+      border: none;
+      color: var(--text);
+    }
+    /* バッジ色: 対象列は色分け、部署列は黒 */
+    .badge-tsukan { color: #1e40af; font-weight: 700; }
+    .badge-eigyo  { color: #c2410c; font-weight: 700; }
+    .badge-other  { color: var(--text); }
+    /* 部署列のバッジは黒に上書き */
+    .td-dept .badge-tsukan,
+    .td-dept .badge-eigyo,
+    .td-dept .badge-other { color: var(--text); font-weight: 400; }
+
+    /* ─── edit mode ─── */
+    [contenteditable="false"] { outline: none; cursor: default; }
+
+    body.edit-mode [contenteditable="true"] {
+      outline: none; border-radius: 0; cursor: text;
+      box-shadow: none;
+      background: transparent;
+      transition: none;
+      min-width: 24px;
+      border-bottom: 1.5px dashed var(--edit-ring);
+    }
+    body.edit-mode [contenteditable="true"]:focus {
+      box-shadow: none;
+      background: rgba(59,130,246,0.06);
+    }
+    /* 編集モード: 全spanの枠線を消す */
+    body.edit-mode td span[contenteditable="true"],
+    body.edit-mode td span[contenteditable="true"]:focus {
+      box-shadow: none !important;
+      background: transparent !important;
+      outline: none !important;
+      border-radius: 0;
+      border-bottom: 1.5px dashed var(--edit-ring);
+    }
+    /* バッジ・講師・部署は下線も枠線も不要 */
+    body.edit-mode .td-dept span[contenteditable="true"],
+    body.edit-mode .td-dept span[contenteditable="true"]:focus,
+    body.edit-mode .td-lecturer span[contenteditable="true"],
+    body.edit-mode .td-lecturer span[contenteditable="true"]:focus,
+    body.edit-mode .td-target span[contenteditable="true"],
+    body.edit-mode .td-target span[contenteditable="true"]:focus {
+      border: none !important;
+      border-bottom: none !important;
+    }
+    /* 編集モード中はバッジの枠線を消す */
+    body.edit-mode .badge {
+      border: none !important;
+      border-radius: 4px !important;
+      background: rgba(59,130,246,0.06) !important;
+      padding: 3px 6px !important;
+    }
+
+    /* ─── drag / row controls ─── */
+    .row-controls { display: none; gap: 4px; align-items: center; justify-content: center; }
+    body.edit-mode .row-controls { display: flex; }
+
+    .btn-row {
+      width: 22px; height: 22px; border-radius: 50%; border: none; cursor: pointer;
+      font-size: 15px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .btn-del { background: #fee2e2; color: #dc2626; }
+    .btn-del:hover { background: #dc2626; color: white; }
+
+    .drag-handle {
+      cursor: grab; color: #94a3b8; font-size: 16px;
+      padding: 2px 4px; border-radius: 4px;
+      user-select: none; transition: color 0.15s;
+      display: none; align-items: center;
+    }
+    body.edit-mode .drag-handle { display: flex; }
+    .drag-handle:hover { color: var(--navy-mid); background: #f1f5f9; }
+    .drag-handle:active { cursor: grabbing; }
+
+    tr.drag-over td { border-top: 2px solid var(--edit-ring) !important; }
+    tr.dragging { opacity: 0.4; }
+
+    /* ─── add row ─── */
+    .add-row-wrap { display: none; padding: 10px 16px; border-top: 1px dashed var(--border); }
+    body.edit-mode .add-row-wrap { display: block; }
+    .btn-add-row {
+      display: flex; align-items: center; gap: 6px;
+      padding: 7px 16px; border-radius: 6px;
+      border: 1.5px dashed #94a3b8; background: transparent; color: #64748b;
+      font-family: 'BIZ UDPGothic', 'メイリオ', sans-serif; font-size: 12px; font-weight: 700;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-add-row:hover { border-color: var(--edit-ring); color: var(--edit-ring); background: rgba(59,130,246,0.05); }
+
+    /* ─── footer ─── */
+    .footer {
+      margin-top: 24px; padding: 20px 0 8px;
+      display: flex; justify-content: flex-end; align-items: center;
+      gap: 12px; border-top: 1px solid var(--border);
+    }
+    .footer-text { font-size: 13px; color: var(--text-muted); letter-spacing: 0.08em; }
+
+    /* ─── toast ─── */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1e293b; color: white;
+      padding: 10px 24px; border-radius: 8px;
+      font-size: 15px; font-weight: 700;
+      opacity: 0; pointer-events: none; transition: all 0.3s; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media print {
+      body { padding: 0; background: white; }
+      .toolbar, .row-controls, .add-row-wrap, .toast { display: none !important; }
+      .header::after { display: none; }
+    }
+  </style>
+</head>
+<body class="">
+<div class="page">
+
+  <!-- Toolbar -->
+  
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-label">通関部勉強会</div>
+    <div class="header-title">通関ゼミナール</div>
+    <div class="header-sub">2026年6月 ─ 2027年3月　全10回開催</div>
+  </div>
+
+  <!-- Info bar -->
+  <div class="info-bar">
+    <div class="info-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <rect x="3" y="4" width="18" height="18" rx="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line>
+      </svg>
+      <span class="info-label">開催期間：</span>
+      <span class="info-editable" contenteditable="false">2026年6月 〜 2027年3月（全10回）</span>
+    </div>
+    <div class="info-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      <span class="info-label">対象者：</span>
+      <span class="info-editable" contenteditable="false">入社1〜5年目程度の社員（派遣社員含む）</span>
+    </div>
+    <div class="info-item">
+      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      <span class="info-label">研修時間：</span>
+      <span class="info-editable" contenteditable="false">16:00〜 約1時間（講義50分・質疑応答10分）</span>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-wrap">
+    <table id="mainTable">
+      <colgroup>
+        <col class="col-no">
+        <col class="col-title">
+        <col class="col-date">
+        <col class="col-content">
+        <col class="col-dept">
+        <col class="col-lec">
+        <col class="col-target">
+        <col class="col-ctrl">
+      </colgroup>
+      <thead>
+        <tr>
+          <th class="center">No.</th>
+          <th>項目</th>
+          <th>日程</th>
+          <th>講義内容</th>
+          <th class="center">部署</th>
+          <th class="center">講師</th>
+          <th class="center">主な対象</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody id="tableBody"><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">1</span></td>
+    <td class="td-title"><span contenteditable="false">航空輸出入通関実務の流れ</span></td>
+    <td class="td-date"><span contenteditable="false">2026/6/17（水）</span></td>
+    <td class="td-content"><span contenteditable="false">通関指示を受けてから許可に至るまでの実務の流れ</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">西・航空輸出通関係<br>西・航空輸入通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">西山<br>森下<br></span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-eigyo">営業部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">2</span></td>
+    <td class="td-title"><span contenteditable="false">海上輸出入通関実務の流れ</span></td>
+    <td class="td-date"><span contenteditable="false">2026/7/30（木）</span></td>
+    <td class="td-content"><span contenteditable="false">通関指示を受けてから許可に至るまでの実務の流れ</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">西・海運通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">足立</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-eigyo">営業部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">3</span></td>
+    <td class="td-title"><span contenteditable="false">品目分類の概要と通則</span></td>
+    <td class="td-date"><span contenteditable="false">2026/8/19（水）</span></td>
+    <td class="td-content"><span contenteditable="false">通則に照らしたHSコード決定のプロセス、少額合算ルール等の説明</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">東・航空輸入通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">上野（仮</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">4</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（衣類・アパレル）</span></td>
+    <td class="td-date"><span contenteditable="false">2026/9/16（水）</span></td>
+    <td class="td-content"><span contenteditable="false">化学式、構造式の見方及びHSコード採番における実務上の注意点</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">福岡空港通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">白石</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">5</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（動物・植物関係）</span></td>
+    <td class="td-date"><span contenteditable="false">2026/10/14（水）</span></td>
+    <td class="td-content"><span contenteditable="false">動物検疫、植物検疫を要する貨物の通関の流れ及び実務上の注意点</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-other">関西空港出張所</span></td>
+    <td class="td-lecturer"><span contenteditable="false">伊村</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">6</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（食品）</span></td>
+    <td class="td-date"><span contenteditable="false">2026/11/18（水）</span></td>
+    <td class="td-content"><span contenteditable="false">食品衛生法に該当する貨物の通関の流れ及び実務上の注意点</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">成田空港通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">窪田<br>大橋<br></span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">7</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（化学品）</span></td>
+    <td class="td-date"><span contenteditable="false">2026/12/16（水）</span></td>
+    <td class="td-content"><span contenteditable="false">化学式、構造式の見方及びHSコード採番における実務上の注意点</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">中部空港通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">久高</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">8</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（関税評価）</span></td>
+    <td class="td-date"><span contenteditable="false">2027/1/20（水）</span></td>
+    <td class="td-content"><span contenteditable="false">課税価格決定の原則、評価申告、納税申告に誤りがあった場合の手続き（修正申告、更正の請求の手続き及び過少申告加算税）</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">東・海運通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">寒河江</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">9</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（カルネ・減免税）</span></td>
+    <td class="td-date"><span contenteditable="false">2027/2/17（水）</span></td>
+    <td class="td-content"><span contenteditable="false">減免税の種類、手続きの流れ及び実務上の注意点</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">東・航空輸出通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">佐伯</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr><tr draggable="false">
+    <td class="td-no"><span contenteditable="false">10</span></td>
+    <td class="td-title"><span contenteditable="false">通関の実務（原産地規則・EPA・RCEP）</span></td>
+    <td class="td-date"><span contenteditable="false">2027/3/17（水）</span></td>
+    <td class="td-content"><span contenteditable="false">原産地規則、EPA、RCEPの定義及び通関手続きの流れ</span></td>
+    <td class="td-dept"><span contenteditable="false" class="badge badge-tsukan">東・航空輸入通関係</span></td>
+    <td class="td-lecturer"><span contenteditable="false">上野（仮</span></td>
+    <td class="td-target"><span contenteditable="false" class="badge badge-tsukan">通関部</span></td>
+    <td style="text-align:center;">
+      
+    </td>
+  </tr></tbody>
+    </table>
+    
+  </div>
+
+  <!-- Footer -->
+  <div class="footer">
+    <span class="footer-text">通関部勉強会資料</span>
+    <span class="footer-text">│</span>
+    <span class="footer-text">2026 – 2027</span>
+  </div>
+</div>
+
+
+
+<script>
+const initialRows = [
+  {
+    "no": "1",
+    "title": "航空輸出入通関実務の流れ",
+    "date": "2026/6/17（水）",
+    "content": "通関指示を受けてから許可に至るまでの実務の流れ",
+    "dept": "西・航空輸出通関係\n西・航空輸入通関係",
+    "lecturer": "西山\n森下\n",
+    "target": "営業部"
+  },
+  {
+    "no": "2",
+    "title": "海上輸出入通関実務の流れ",
+    "date": "2026/7/30（木）",
+    "content": "通関指示を受けてから許可に至るまでの実務の流れ",
+    "dept": "西・海運通関係",
+    "lecturer": "足立",
+    "target": "営業部"
+  },
+  {
+    "no": "3",
+    "title": "品目分類の概要と通則",
+    "date": "2026/8/19（水）",
+    "content": "通則に照らしたHSコード決定のプロセス、少額合算ルール等の説明",
+    "dept": "東・航空輸入通関係",
+    "lecturer": "上野（仮",
+    "target": "通関部"
+  },
+  {
+    "no": "4",
+    "title": "通関の実務（衣類・アパレル）",
+    "date": "2026/9/16（水）",
+    "content": "化学式、構造式の見方及びHSコード採番における実務上の注意点",
+    "dept": "福岡空港通関係",
+    "lecturer": "白石",
+    "target": "通関部"
+  },
+  {
+    "no": "5",
+    "title": "通関の実務（動物・植物関係）",
+    "date": "2026/10/14（水）",
+    "content": "動物検疫、植物検疫を要する貨物の通関の流れ及び実務上の注意点",
+    "dept": "関西空港出張所",
+    "lecturer": "伊村",
+    "target": "通関部"
+  },
+  {
+    "no": "6",
+    "title": "通関の実務（食品）",
+    "date": "2026/11/18（水）",
+    "content": "食品衛生法に該当する貨物の通関の流れ及び実務上の注意点",
+    "dept": "成田空港通関係",
+    "lecturer": "窪田\n大橋\n",
+    "target": "通関部"
+  },
+  {
+    "no": "7",
+    "title": "通関の実務（化学品）",
+    "date": "2026/12/16（水）",
+    "content": "化学式、構造式の見方及びHSコード採番における実務上の注意点",
+    "dept": "中部空港通関係",
+    "lecturer": "久高",
+    "target": "通関部"
+  },
+  {
+    "no": "8",
+    "title": "通関の実務（関税評価）",
+    "date": "2027/1/20（水）",
+    "content": "課税価格決定の原則、評価申告、納税申告に誤りがあった場合の手続き（修正申告、更正の請求の手続き及び過少申告加算税）",
+    "dept": "東・海運通関係",
+    "lecturer": "寒河江",
+    "target": "通関部"
+  },
+  {
+    "no": "9",
+    "title": "通関の実務（カルネ・減免税）",
+    "date": "2027/2/17（水）",
+    "content": "減免税の種類、手続きの流れ及び実務上の注意点",
+    "dept": "東・航空輸出通関係",
+    "lecturer": "佐伯",
+    "target": "通関部"
+  },
+  {
+    "no": "10",
+    "title": "通関の実務（原産地規則・EPA・RCEP）",
+    "date": "2027/3/17（水）",
+    "content": "原産地規則、EPA、RCEPの定義及び通関手続きの流れ",
+    "dept": "東・航空輸入通関係",
+    "lecturer": "上野（仮",
+    "target": "通関部"
+  }
+];
+
+let editMode = false;
+let dragging = null;
+
+// contenteditable HTML -> plain text (with \n for line breaks)
+function getPlainText(el) {
+  if (!el) return '';
+  let html = el.innerHTML;
+  html = html.replace(/<br\s*\/?>/gi, '\n');
+  html = html.replace(/<div>/gi, '\n');
+  html = html.replace(/<\/div>/gi, '');
+  const tmp = document.createElement('div');
+  tmp.innerHTML = html;
+  return tmp.textContent;
+}
+
+// plain text (with \n) -> HTML for contenteditable display
+function textToHTML(text) {
+  if (!text) return '';
+  return String(text)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/\n/g, '<br>');
+}
+
+// badge class helper
+function badgeCls(text) {
+  if (!text) return '';
+  if (text.includes('通関')) return 'badge badge-tsukan';
+  if (text.includes('営業')) return 'badge badge-eigyo';
+  return 'badge badge-other';
+}
+function badgeSpan(text, editable) {
+  const ce = editable ? 'true' : 'false';
+  const cls = badgeCls(text);
+  return `<span contenteditable="${ce}" class="${cls}">${textToHTML(text)}</span>`;
+}
+
+// make one table row
+function makeRow(r) {
+  const tr = document.createElement('tr');
+  tr.draggable = false;
+  const ce = editMode ? 'true' : 'false';
+  tr.innerHTML = `
+    <td class="td-no"><span contenteditable="${ce}">${textToHTML(r.no)}</span></td>
+    <td class="td-title"><span contenteditable="${ce}">${textToHTML(r.title)}</span></td>
+    <td class="td-date"><span contenteditable="${ce}">${textToHTML(r.date)}</span></td>
+    <td class="td-content"><span contenteditable="${ce}">${textToHTML(r.content)}</span></td>
+    <td class="td-dept">${badgeSpan(r.dept, editMode)}</td>
+    <td class="td-lecturer"><span contenteditable="${ce}">${textToHTML(r.lecturer ?? '')}</span></td>
+    <td class="td-target">${badgeSpan(r.target, editMode)}</td>
+    <td style="text-align:center;">
+      <div class="row-controls">
+        <span class="drag-handle" title="drag to reorder">&#8942;</span>
+        <button class="btn-row btn-del" title="delete" onclick="deleteRow(this)">&#215;</button>
+      </div>
+    </td>
+  `;
+
+  // live badge color update
+  ['td-dept','td-target'].forEach(cls => {
+    const span = tr.querySelector('.' + cls + ' span');
+    if (span) {
+      span.addEventListener('input', () => {
+        const t = span.textContent.trim();
+        span.className = t ? badgeCls(t) : '';
+      });
+    }
+  });
+
+  const handle = tr.querySelector('.drag-handle');
+  handle.addEventListener('mousedown', () => { tr.draggable = true; });
+  handle.addEventListener('mouseleave', () => { if (!dragging) tr.draggable = false; });
+  tr.addEventListener('dragstart', onDragStart);
+  tr.addEventListener('dragend',   onDragEnd);
+  tr.addEventListener('dragover',  onDragOver);
+  tr.addEventListener('dragleave', onDragLeave);
+  tr.addEventListener('drop',      onDrop);
+  return tr;
+}
+
+// render all rows
+function renderTable() {
+  const tbody = document.getElementById('tableBody');
+  tbody.innerHTML = '';
+  initialRows.forEach(r => tbody.appendChild(makeRow(r)));
+}
+
+// toggle edit mode
+function toggleEdit() {
+  editMode = !editMode;
+  document.body.classList.toggle('edit-mode', editMode);
+  const btnEdit = document.getElementById('btnEdit');
+  const btnSave = document.getElementById('btnSave');
+  const btnSaveEdit = document.getElementById('btnSaveEdit');
+  const hint = document.getElementById('editHint');
+
+  if (editMode) {
+    btnEdit.textContent = '\u2715 編集終了';
+    btnEdit.classList.add('active');
+    btnSave.classList.add('visible');
+    btnSaveEdit.classList.add('visible');
+    hint.classList.add('visible');
+    document.querySelectorAll('td span[contenteditable], .info-editable').forEach(s => s.setAttribute('contenteditable','true'));
+  } else {
+    btnEdit.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 編集モード';
+    btnEdit.classList.remove('active');
+    btnSave.classList.remove('visible');
+    btnSaveEdit.classList.remove('visible');
+    hint.classList.remove('visible');
+    document.querySelectorAll('td span[contenteditable], .info-editable').forEach(s => s.setAttribute('contenteditable','false'));
+  }
+}
+
+// add row
+function addRow() {
+  const rows = document.getElementById('tableBody').querySelectorAll('tr');
+  const last = rows.length > 0 ? (parseInt(rows[rows.length-1].querySelector('.td-no span').textContent) || rows.length) + 1 : 1;
+  const r = { no: String(last), title:'（項目を入力）', date:'', content:'', dept:'', lecturer:'', target:'' };
+  document.getElementById('tableBody').appendChild(makeRow(r));
+}
+
+// delete row
+function deleteRow(btn) {
+  if (!confirm('この行を削除しますか？')) return;
+  btn.closest('tr').remove();
+}
+
+// drag & drop
+function onDragStart(e) {
+  dragging = this; this.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain','');
+}
+function onDragEnd() {
+  dragging = null; this.draggable = false; this.classList.remove('dragging');
+  document.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+}
+function onDragOver(e) {
+  if (!dragging || dragging === this) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('tr.drag-over').forEach(r => r.classList.remove('drag-over'));
+  this.classList.add('drag-over');
+}
+function onDragLeave() { this.classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  if (!dragging || dragging === this) return;
+  this.classList.remove('drag-over');
+  const tbody = document.getElementById('tableBody');
+  const rows  = [...tbody.querySelectorAll('tr')];
+  if (rows.indexOf(dragging) < rows.indexOf(this)) tbody.insertBefore(dragging, this.nextSibling);
+  else tbody.insertBefore(dragging, this);
+}
+
+// collect current data from DOM
+function collectData() {
+  const rows = [...document.getElementById('tableBody').querySelectorAll('tr')];
+  const currentRows = rows.map(tr => {
+    const spans = tr.querySelectorAll('td span[contenteditable]');
+    return {
+      no:       getPlainText(spans[0]).trim(),
+      title:    getPlainText(spans[1]),
+      date:     getPlainText(spans[2]),
+      content:  getPlainText(spans[3]),
+      dept:     getPlainText(tr.querySelector('.td-dept span')).trim(),
+      lecturer: getPlainText(tr.querySelector('.td-lecturer span')),
+      target:   getPlainText(tr.querySelector('.td-target span')).trim(),
+    };
+  });
+  const infoValues = [...document.querySelectorAll('.info-editable')].map(s => s.textContent.trim());
+  return { currentRows, infoValues };
+}
+
+// build HTML string for saving
+function buildHTML(keepEditing) {
+  const { currentRows, infoValues } = collectData();
+  const clone = document.documentElement.cloneNode(true);
+
+  // update initialRows in script tag
+  clone.querySelectorAll('script').forEach(s => {
+    s.textContent = s.textContent.replace(
+      /const initialRows = \[[\s\S]*?\];/,
+      'const initialRows = ' + JSON.stringify(currentRows, null, 2) + ';'
+    );
+  });
+
+  // update info bar
+  clone.querySelectorAll('.info-editable').forEach((s, i) => {
+    if (infoValues[i] !== undefined) s.textContent = infoValues[i];
+  });
+
+  // strip edit UI if final version
+  if (!keepEditing) {
+    clone.querySelector('.toolbar')?.remove();
+    clone.querySelector('.toast')?.remove();
+  }
+  clone.querySelector('.add-row-wrap')?.remove();
+  clone.querySelectorAll('.row-controls').forEach(el => el.remove());
+  clone.querySelector('body')?.classList.remove('edit-mode');
+  clone.querySelectorAll('[contenteditable]').forEach(el => el.setAttribute('contenteditable','false'));
+
+  return '<!DOCTYPE html>\n' + clone.outerHTML;
+}
+
+// fallback: 通常ダウンロード
+function downloadHTML(html, filename) {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// 編集用保存: 常に同じファイル名でダウンロード
+// ブラウザが同名ファイルの上書き確認を出す
+async function saveEditable() {
+  const html = buildHTML(true);
+  const fname = '通関ゼミナール_編集用.html';
+
+  // File System Access API 対応ブラウザ（Chrome等）: 初回選択→以降上書き
+  if (window.showSaveFilePicker) {
+    try {
+      if (!window._editFH) {
+        window._editFH = await window.showSaveFilePicker({
+          suggestedName: fname,
+          types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }]
+        });
+      }
+      const w = await window._editFH.createWritable();
+      await w.write(html);
+      await w.close();
+      showToast('上書き保存しました');
+      return;
+    } catch(err) {
+      if (err.name === 'AbortError') return; // キャンセル
+      window._editFH = null; // エラー時リセット
+    }
+  }
+  // フォールバック: 固定ファイル名でダウンロード
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = fname;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  showToast('編集用ファイルを保存しました（同じファイル名で保存してください）');
+}
+
+async function saveHTML() {
+  const html = buildHTML(false);
+  downloadHTML(html, '通関ゼミナール.html');
+  showToast('完成版を保存しました');
+}
+
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = '\u2705 ' + msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2800);
+}
+
+renderTable();
+</script>
+
+
+</body></html>
